@@ -1,44 +1,39 @@
 import sys
-import random
-from PyQt6 import QtWidgets
-from PyQt6.QtGui import QPainter, QColor
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QWidget, QVBoxLayout
+import sqlite3
+from PyQt6 import QtWidgets, uic
 
 
-class MainApp(QMainWindow):
+class CoffeeApp(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Рисование случайных окружностей")
-        self.setGeometry(100, 100, 800, 600)
+        uic.loadUi("main.ui", self)  
 
-        self.central_widget = QWidget(self)
-        self.setCentralWidget(self.central_widget)
+        
+        self.btnLoadData.clicked.connect(self.load_data)
 
-        layout = QVBoxLayout(self.central_widget)
+    def load_data(self):
+        """Загружает данные из БД в таблицу."""
+        conn = sqlite3.connect("coffee.sqlite")
+        cursor = conn.cursor()
 
-        self.button = QPushButton("Добавить окружность", self)
-        self.button.setFixedHeight(50)  
-        self.button.clicked.connect(self.draw_circle)
-        layout.addWidget(self.button)
-        self.circles = []
+        cursor.execute("SELECT * FROM coffee")
+        rows = cursor.fetchall()
 
-    def draw_circle(self):
-        x = random.randint(50, 700)  
-        y = random.randint(100, 500)  
-        diameter = random.randint(20, 100)  
-        color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  
-        self.circles.append((x, y, diameter, color))
-        self.update()  
+        self.tableWidget.setRowCount(len(rows))
+        self.tableWidget.setColumnCount(6)
+        self.tableWidget.setHorizontalHeaderLabels(
+            ["ID", "Название", "Обжарка", "Молотый/Зерно", "Вкус", "Цена", "Объем"]
+        )
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        for x, y, diameter, color in self.circles:
-            painter.setBrush(color)
-            painter.drawEllipse(x, y, diameter, diameter)
+        for row_idx, row_data in enumerate(rows):
+            for col_idx, col_data in enumerate(row_data):
+                self.tableWidget.setItem(row_idx, col_idx, QtWidgets.QTableWidgetItem(str(col_data)))
+
+        conn.close()
 
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    window = MainApp()
+    window = CoffeeApp()
     window.show()
     sys.exit(app.exec())
